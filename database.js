@@ -47,7 +47,7 @@ class Database {
 
     /**
      * @param {'create'|'insert'|'delete'|'update'|'config' | 'query'} eventName
-     * @param {(event:{ ConditionBuilder:ConditionBuilder, database_name:string,update?:(table_name:string, original_value:{} field:{}) => Table,getTable?:Table,add?:(table_name:string, data:[{ name:string,type:name,size?:Number }] | [{ value:string }]) => void }) => void} callback 
+     * @param {(event:{database_name:string,update?:(table_name:string, original_value:{} field:{}) => Table,getTable?:Table,add?:(table_name:string, data:[{ name:string,type:name,size?:Number }] | [{ value:string }]) => Table }) => void} callback 
      */
     on(eventName, callback) {
         if(['create', 'insert', 'delete', 'update', 'config', 'query'].includes(eventName)) {
@@ -60,7 +60,9 @@ class Database {
             if(eventName == 'create') evt.add = (table_name, data) => {
                 data.forEach((value, index, arr) => {
                     if(value.type == 'boolean') arr[index].size = 4
-                    if(value.type == 'int') arr[index].size = this.MAX_INT_SIZE
+                    if(value.type == 'int')  {
+                        if(!arr[index].hasOwnProperty('size')) arr[index].size = this.MAX_INT_SIZE
+                    }
                 })
                 this.data.tables[table_name] = {
                     data:data,
@@ -71,7 +73,6 @@ class Database {
 
             if(eventName == 'insert') evt.add = (table_name, content) => {
                 let data = this.data.tables[table_name].data
-                let values = this.data.tables[table_name].values
                 if(data.length != content.length) return;
         
                 let match = true
@@ -89,10 +90,12 @@ class Database {
                         break;
                     }
                 }
-                if(match) values.push(content)
+                if(match) this.data.tables[table_name].values.push(content)
                 else throw new Error(errorMsg)
-                
+
                 this.save()
+
+                return new Table(table_name, this.data[table_name])
             }
             
             if(eventName == 'query') {
