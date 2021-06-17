@@ -26,5 +26,5 @@ myBase.on('update', (event) => {
         isActive:false
     })
     
-    // console.log(table.json)
+    console.log(table.json)
 })

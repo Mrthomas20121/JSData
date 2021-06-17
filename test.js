@@ -1,11 +1,10 @@
 const { Database } = require('./database')
 
 let myBase = new Database({
-    name: 'test',
-    path:{
-        base:'./test'
-    },
-    format:'json'
+    config:{
+        name: 'test',
+        path: './test'
+    }
 })
 
 myBase.on('create', (event) => {

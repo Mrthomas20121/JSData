@@ -1,29 +1,30 @@
-/**
- * encrypt a string
- * @param {string} input 
- */
-const encrypt = (input) => {
-    return stringToHex(input)
-}
+const crypto = require('crypto');
+const key = Buffer.from("232f150296ffd446fc0b39fa32d1c1d42c2e232ccd3203df729b7f3c3c63a5da2", "hex");
+const iv = crypto.randomBytes(16);
 
 /**
- * decrypt a string
- * @param {any} input 
+ * Encrypt a value
+ * @param {*} text 
  */
-const decrypt = (input) => {
-    return hexToString(input)
+function encrypt(text) {
+    let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), iv);
+    let encrypted = cipher.update(text);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return `${iv.toString('hex')}\r\n${encrypted.toString('hex')}`
 }
 
-function stringToHex(str)
-{
-    const buf = Buffer.from(str, 'utf8');
-    return buf.toString('hex');
-}
-
-function hexToString(str)
-{
-    const buf = Buffer.from(str,'hex');
-    return buf.toString('utf8');
+/**
+ * Decrypt a value
+ * @param {string} text 
+ */
+function decrypt(text) {
+    let arr = text.split('\r\n')
+    let iv = Buffer.from(arr[0], 'hex');
+    let encryptedText = Buffer.from(arr[1], 'hex');
+    let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key), iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
 }
 
 module.exports = {

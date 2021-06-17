@@ -4,45 +4,34 @@ const { encrypt, decrypt } = require('./content/encryption')
 const { Table } = require('./content/table')
 
 class Database {
-    
-    config = {
-        path: {
-            base:''
-        },
-        name: ''
-    }
-
-    data = {
-        tables: {
-
-        }
-    }
-
     MAX_INT_SIZE = Number.MAX_SAFE_INTEGER
 
     /**
      * Create a Database
-     * @param { { path:{ base:string},name:string,format?:'json'|'jsdata' } } config
+     * @param { { config:{ path:string,name:string }, tables?:{} } } database_conf
      */
-    constructor(config={}) {
-        this.format = config.hasOwnProperty('format') ? config.format : 'jsdata'
+    constructor(database_conf={}) {
         this.emitter = new events.EventEmitter()
         let converted_path = ""
 
-        if(config == {}) {
-            this.config.path.base = `%appdata%/JSData/database/${this.config.name}`
-            converted_path = replaceArgs(this.config.path.base)
+        this.data = {
+            config:database_conf.hasOwnProperty('config') ? database_conf.config : {},
+            tables:database_conf.hasOwnProperty('tables') ? database_conf.tables : {}
         }
-        else {
-            this.config = config
-            converted_path = replaceArgs(this.config.path.base)
-            if(fs.existsSync(`${converted_path}/data.${this.format}`)) {
-                let data = readFile(`${converted_path}/data.${this.format}`)
-                this.data = data
+
+        if(database_conf.hasOwnProperty('config')) {
+            if(!database_conf.config.hasOwnProperty('path')) {
+                this.data.config.path = `%appdata%/JSData/database/${database_conf.config.name}`
+                converted_path = replaceArgs(this.data.config.path)
+            }
+            else {
+                converted_path = replaceArgs(database_conf.config.path)
             }
         }
         
         if(!fs.existsSync(converted_path)) fs.mkdirSync(converted_path)
+
+        this.save()
     }
 
     /**
@@ -54,7 +43,7 @@ class Database {
             this.emitter.on(eventName, callback)
 
             let evt = {
-                database_name:this.config.name,
+                database_name:this.data.config.name,
             } 
             
             if(eventName == 'create') evt.add = (table_name, data) => {
@@ -68,7 +57,7 @@ class Database {
                     data:data,
                     values:[]
                 }
-                this.save()
+                //this.save()
             }
 
             if(eventName == 'insert') evt.add = (table_name, content) => {
@@ -146,11 +135,10 @@ class Database {
     }
 
     /**
-     * Save the database content
+     * Save the database content to the file
      */
     save() {
-        writeFile(`${this.config.path.base}/config.jsdata`, this.config)
-        writeFile(`${this.config.path.base}/data.${this.format}`, this.data)
+        writeFile(`${this.data.config.path}/database.jdbx`, this.data)
     }
 
     /**
@@ -158,7 +146,7 @@ class Database {
      * @param {string} path Database path
      */
     static open(path) {
-        let config = readFile(`${replaceArgs(path)}/config.jsdata`)
+        let config = readFile(`${replaceArgs(path)}/database.jdbx`)
         let base = new Database(config)
         return base
     }
@@ -182,8 +170,7 @@ function lessThan(a, b) {
  * @return { Object } JSON
  */
 function readFile(file) {
-    if(file.endsWith('jsdata')) return JSON.parse(decrypt(fs.readFileSync(file, 'utf8')))
-    else return JSON.parse(fs.readFileSync(file, 'utf8'))
+    return JSON.parse(decrypt(fs.readFileSync(file, 'utf8')))
 }
 
 /**
@@ -192,7 +179,7 @@ function readFile(file) {
  */
 function writeFile(file, content) {
     let json = JSON.stringify(content, null, 4)
-    fs.writeFileSync(file, file.endsWith('.jsdata')? encrypt(json): json, 'utf8')
+    fs.writeFileSync(file, encrypt(json), 'utf8')
 }
 
 /**
